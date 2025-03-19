@@ -1,0 +1,126 @@
+% Task 1: Implementation of the LU algorithm and solving a system of equations
+% Decomposing matrix A into L and U and solving the system Ax = b
+function [L, U, x] = lu_solver(A, b)
+    % Get the size of matrix A
+    n = size(A, 1);
+    
+    % Initialize matrices L and U
+    L = eye(n); % Identity matrix
+    U = A;      % Copy of matrix A, which will be transformed
+    
+    % Gaussian elimination loop (main part of the algorithm)
+    for i = 1:n-1
+        for j = i+1:n
+            L(j, i) = U(j, i) / U(i, i); % Compute the coefficient for matrix L
+            U(j, i:n) = U(j, i:n) - L(j, i) * U(i, i:n); % Update rows of U
+        end
+    end
+    
+    % Solve L * y = b (forward substitution)
+    y = zeros(n, 1);
+    for i = 1:n
+        y(i) = b(i) - L(i, 1:i-1) * y(1:i-1);
+    end
+    
+    % Solve U * x = y (backward substitution)
+    x = zeros(n, 1);
+    for i = n:-1:1
+        x(i) = (y(i) - U(i, i+1:n) * x(i+1:n)) / U(i, i);
+    end
+end
+
+% Task 2: Implementation of the Cholesky algorithm and solving a system of equations
+% Decomposing matrix A into L and L' and solving the system Ax = b
+function [L, x] = cholesky_solver(A, b)
+    % Cholesky decomposition (only for symmetric positive definite matrices)
+    n = size(A, 1);
+    L = zeros(n); % Initialize matrix L
+    
+    % Compute elements of L
+    for i = 1:n
+        for j = 1:i
+            if i == j
+                L(i, j) = sqrt(A(i, i) - sum(L(i, 1:j-1).^2));
+            else
+                L(i, j) = (A(i, j) - sum(L(i, 1:j-1) .* L(j, 1:j-1))) / L(j, j);
+            end
+        end
+    end
+    
+    % Solve L * y = b (forward substitution)
+    y = zeros(n, 1);
+    for i = 1:n
+        y(i) = (b(i) - L(i, 1:i-1) * y(1:i-1)) / L(i, i);
+    end
+    
+    % Solve L' * x = y (backward substitution)
+    x = zeros(n, 1);
+    for i = n:-1:1
+        x(i) = (y(i) - L(i+1:n, i)' * x(i+1:n)) / L(i, i);
+    end
+end
+
+% Task 3: Implementation of the least squares method
+% Solving a system of equations using the least squares method
+function x = least_squares_solver(A, b)
+    % Compute the solution using the normal equation
+    x = (A' * A) \ (A' * b); % Use \ instead of inversion for higher accuracy
+end
+
+% Task 4: Implementation of the Levinson-Durbin algorithm
+% Solving a Toeplitz system (symmetric matrix) using a fast algorithm
+function x = levinson_durbin_solver(r, b)
+    n = length(r); % Length of vector r
+    x = zeros(n, 1); % Initialize solution
+    x(1) = b(1) / r(1); % First element of the solution
+    
+    for k = 2:n
+        % Compute elements of the auxiliary vector
+        alpha = (b(k) - r(2:k)' * x(1:k-1)) / r(1);
+        x(1:k) = x(1:k) + alpha * [flip(x(1:k-1)); 1];
+    end
+end
+
+% Task 5: Convolution operations in time and frequency domains
+function [conv_time, conv_freq] = convolution_operations(x, h)
+    % Convolution in the time domain
+    conv_time = conv(x, h); % MATLAB's built-in convolution function
+    
+    % Convolution in the frequency domain
+    N = length(x) + length(h) - 1; % Size for FFT
+    X = fft(x, N); % Fourier Transform of signal x
+    H = fft(h, N); % Fourier Transform of signal h
+    conv_freq = ifft(X .* H); % Element-wise multiplication in frequency domain and inverse FFT
+end
+
+% Task 6: Signal generation and filter design
+function design_and_test_filters()
+    % Signal parameters
+    Fs = 1000; % Sampling frequency
+    t = 0:1/Fs:1-1/Fs; % Time samples (1 second)
+    
+    % Generate a signal (four different frequencies)
+    signal = sin(2*pi*50*t) + sin(2*pi*150*t) + sin(2*pi*250*t) + sin(2*pi*400*t);
+    
+    % Design FIR filters
+    fir_low = fir1(50, 0.2); % Low-pass filter
+    fir_high = fir1(50, 0.2, 'high'); % High-pass filter
+    fir_band = fir1(50, [0.2 0.4]); % Band-pass filter
+    fir_stop = fir1(50, [0.2 0.4], 'stop'); % Band-stop filter
+    
+    % Filter the signal
+    filtered_signals = {
+        filter(fir_low, 1, signal),
+        filter(fir_high, 1, signal),
+        filter(fir_band, 1, signal),
+        filter(fir_stop, 1, signal)
+    };
+    
+    % Plot the results
+    figure;
+    for i = 1:4
+        subplot(2, 2, i);
+        plot(abs(fft(filtered_signals{i}))); % Spectrum of the signal
+        title(['Filter ' num2str(i)]);
+    end
+end
